@@ -48,7 +48,7 @@ const getShiftedHead = (direction: Direction, pieces: Array<cell>) => {
     return head;
 }
 
-export const shiftSnake = (snakeData: SnakeData, prey: PreyData) => {
+export const shiftSnake = (snakeData: SnakeData, preys: Array<PreyData>) => {
 
     const {pieces, direction, isAlive} = snakeData;
 
@@ -59,7 +59,11 @@ export const shiftSnake = (snakeData: SnakeData, prey: PreyData) => {
 
     newPieces.push(head);
 
-    if (head.x === prey.placement.x && head.y === prey.placement.y)
+    const isSnakeAtePrey = preys.some(p => {
+        return head.x === p.placement.x && head.y === p.placement.y
+    })
+
+    if (isSnakeAtePrey)
     {
         newPieces = newPieces.concat(pieces);
     }
@@ -99,7 +103,7 @@ export const drawSnake = (snakeData: SnakeData, canvasContext: CanvasRenderingCo
         canvasContext.fillRect(c.x, c.y, 20, 20);
     });
 
-    console.log('Context => ' + JSON.stringify(canvasContext.canvas.getBoundingClientRect()));
+    //console.log('Context => ' + JSON.stringify(canvasContext.canvas.getBoundingClientRect()));
     //return canvasContext;
     
 }

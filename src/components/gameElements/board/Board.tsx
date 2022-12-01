@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { drawPrey, generatePrey, PreyData } from "../prey/prey";
+import { drawPreys, generatePreys, PreyData } from "../prey/prey";
 import { Direction, drawSnake, initialSnakeData, shiftSnake, SnakeData } from "../snake/snake";
 
 interface Props{
@@ -14,15 +14,26 @@ export default function Board({width, height}: Props){
     const gameBoardRef = useRef<HTMLCanvasElement | null>(null);//React.createRef<HTMLCanvasElement>();
     const [gameBoardContext, setGameBoardContext] = useState<CanvasRenderingContext2D | null>(null);
     const [snakeData, setSnakeData] = useState<SnakeData>(initialSnakeData);
-    const [prey, setPrey] = useState<Array<PreyData>>([generatePrey(width, height)]);
+    const [preys, setPreys] = useState<Array<PreyData>>(generatePreys(width, height, 3));
 
     const handleSnakeAtePrey = (snake: SnakeData) => {
 
-        setPrey((prev) => {
+        setPreys((prev) => {
                 const head = {...snake.pieces[0]};
                 
-                return prev.filter(p => !(p.placement.x === head.x && p.placement.y === head.y))
-                    .concat([generatePrey(width, height)])
+                const eatenPrey = prev.find(p => p.placement.x === head.x && p.placement.y === head.y);
+
+                if (eatenPrey)
+                {
+                    return prev.filter(p => !(p.placement.x === eatenPrey.placement.x && eatenPrey.placement.y === head.y))
+                        .concat(generatePreys(width, height, 1))
+                }
+                else
+                {
+                    return prev;
+                }
+
+                
         });
     };
 
@@ -35,7 +46,13 @@ export default function Board({width, height}: Props){
                                     || (head.y > height - 20 && direction === Direction.Down)
                                     || (head.y < 0 && direction === Direction.Up);
 
-        if (isSnakeOutOfBounds)
+        const isSnakeCommitedSuicide = snake.pieces.some((p, i) => {
+            return i != 0 && (p.x === head.x && p.y === head.y); // Check if there is a piece with same coords as head except head itself
+        });
+
+        const snakeIsDone = isSnakeOutOfBounds || isSnakeCommitedSuicide;
+
+        if (snakeIsDone)
         {
             setSnakeData((prev) => {
                 return {
@@ -92,44 +109,43 @@ export default function Board({width, height}: Props){
         //console.log("mount listner: keydown");
         window.addEventListener('keydown', keyPressedHandler);
 
+
         return () => {
             //console.log("unmount listner: keydown");
             window.removeEventListener('keydown', keyPressedHandler);
         }
     }, []);
 
+    
     useEffect(() => {
         const interval = setInterval(() => {
             
-            const newSnake = shiftSnake(snakeData, prey[0]);
-            
+            const newSnake = shiftSnake(snakeData, preys);
+            //console.log('Mount interval');
             //console.log(JSON.stringify(prey[0]));
             setSnakeData(newSnake);
             handleSnakeAtePrey(newSnake);
             updateSnakeIfDead(newSnake);
 
-        }, 100 * 5);
+        }, 100 * 1);
         //to do: разобраться, как это работает????
         //console.log("What?");
         if (snakeData.isAlive) {
             gameBoardContext?.clearRect(0, 0, width, height);
 
-            if (prey.length > 0)
-                drawPrey(prey[0], gameBoardContext);
+            drawPreys(preys, gameBoardContext);
 
-            console.log(JSON.stringify(snakeData.pieces[0]));
+            //console.log(JSON.stringify(snakeData.pieces[0]));
             drawSnake(snakeData, gameBoardContext);
         }
-        
-        
 
         return () => {
             //console.log('unmount interval');
             clearInterval(interval);
         };
         
-    }, [gameBoardContext, snakeData, prey]);
-
+    }, [gameBoardContext, snakeData, preys]);
+    
     return (
         
         <canvas 
